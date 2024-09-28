@@ -202,6 +202,7 @@
             // Place block button
             placeBlockBtn.addEventListener('click', function () {
                 if (player && player.doBlockAction) {
+                    player.isBlockActionFromButton = true;  // Allow block actions from buttons
                     player.doBlockAction(window.innerWidth / 2, window.innerHeight / 2, false);  // Place block
                 }
             });
@@ -209,6 +210,7 @@
             // Remove block button
             removeBlockBtn.addEventListener('click', function () {
                 if (player && player.doBlockAction) {
+                    player.isBlockActionFromButton = true;  // Allow block actions from buttons
                     player.doBlockAction(window.innerWidth / 2, window.innerHeight / 2, true);  // Remove block
                 }
             });

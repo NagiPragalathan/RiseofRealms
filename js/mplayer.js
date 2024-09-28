@@ -12,7 +12,9 @@ MOUSE.MOVE = 3;
 
 // Constructor()
 // Creates a new local player manager.
-function Player() {}
+function Player() {
+    this.isBlockActionFromButton = false;  // Flag for block actions triggered by mobile buttons
+}
 
 // setWorld( world )
 // Assign the local player to a world.
@@ -112,6 +114,11 @@ Player.prototype.onKeyEvent = function( keyCode, down ) {
 // onMouseEvent( x, y, type, rmb )
 // Hook for mouse input.
 Player.prototype.onMouseEvent = function( x, y, type, rmb ) {
+    // Prevent block actions from touch events on mobile devices
+    if (isMobileDevice()) {
+        return;  // Ignore mouse events on mobile devices
+    }
+
     if ( type == MOUSE.UP ) {
         this.doBlockAction( x, y, !rmb );
     } else if (type == MOUSE.MOVE) {
@@ -126,12 +133,17 @@ Player.prototype.onMouseEvent = function( x, y, type, rmb ) {
 // doBlockAction( x, y, destroy )
 // Called to perform an action based on the player's block selection and input.
 Player.prototype.doBlockAction = function( x, y, destroy ) {
+    // Prevent accidental block actions from touch events on mobile
+    if (isMobileDevice() && !this.isBlockActionFromButton) {
+        return;  // Skip block actions unless triggered from buttons on mobile
+    }
+
     var bPos = new Vector( Math.floor( this.pos.x ), Math.floor( this.pos.y ), Math.floor( this.pos.z ) );
     var block = this.canvas.renderer.pickAt( new Vector( bPos.x - 4, bPos.y - 4, bPos.z - 4 ), new Vector( bPos.x + 4, bPos.y + 4, bPos.z + 4 ), x, y );
 
     if ( block != false ) {
         var obj = this.client ? this.client : this.world;
-        
+
         if ( destroy ) {
             obj.setBlock( block.x, block.y, block.z, BLOCK.AIR ); // Destroy block
         } else {
