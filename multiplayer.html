@@ -19,6 +19,7 @@
     <script src="js/physics.js" type="text/javascript"></script>
     <script src="js/mplayer.js" type="text/javascript"></script>
     <script src="js/network.js" type="text/javascript"></script>
+    <script src="js/mobileControls.js" type="text/javascript"></script>
 
     <style>
         /* Crosshair (centered) */
@@ -36,8 +37,55 @@
             pointer-events: none;
         }
 
-        /* Hide the cursor when the canvas is locked */
+        /* Joystick styles */
+        #joystickContainer {
+            position: fixed;
+            bottom: 50px;
+            left: 50px;
+            width: 150px;
+            height: 150px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
+            touch-action: none;
+            z-index: 1001;
+        }
 
+        #joystick {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            top: 45px;
+            left: 45px;
+            touch-action: none;
+        }
+
+        /* Buttons for block placement/removal */
+        #blockControls {
+            position: fixed;
+            bottom: 50px;
+            right: 50px;
+            z-index: 1002;
+        }
+
+        .controlButton {
+            width: 100px;
+            height: 40px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 14px;
+            text-align: center;
+            line-height: 40px;
+            border-radius: 5px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .controlButton:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
     </style>
 </head>
 
@@ -52,6 +100,18 @@
     <table id="materialSelector" style="display:none">
         <tr></tr>
     </table>
+
+    <!-- Joystick for mobile controls -->
+    <div id="joystickContainer" class="hidden">
+        <div id="joystick"></div>
+    </div>
+
+    <!-- Block controls: Place/Remove/Jump -->
+    <div id="blockControls">
+        <button id="placeBlockBtn" class="controlButton">Place Block</button>
+        <button id="removeBlockBtn" class="controlButton">Remove Block</button>
+        <button id="jumpBtn" class="controlButton">Jump</button>
+    </div>
 
     <!-- Chatbox -->
     <div id="chatbox" style="visibility: hidden">
@@ -108,6 +168,39 @@
             if (msg.length == 0) return;
             client.sendMessage(msg);
             chatInput.value = "";
+        }
+
+        // Handle block placement, removal, and jumping
+        function initControls() {
+            const placeBlockBtn = document.getElementById('placeBlockBtn');
+            const removeBlockBtn = document.getElementById('removeBlockBtn');
+            const jumpBtn = document.getElementById('jumpBtn');
+
+            // Place block button
+            placeBlockBtn.addEventListener('click', function () {
+                if (player && player.doBlockAction) {
+                    // Place block at crosshair location
+                    player.doBlockAction(window.innerWidth / 2, window.innerHeight / 2, false);  // false = place block
+                }
+            });
+
+            // Remove block button
+            removeBlockBtn.addEventListener('click', function () {
+                if (player && player.doBlockAction) {
+                    // Remove block at crosshair location
+                    player.doBlockAction(window.innerWidth / 2, window.innerHeight / 2, true);  // true = remove block
+                }
+            });
+
+            // Jump button
+            jumpBtn.addEventListener('click', function () {
+                if (player) {
+                    player.keys[" "] = true;  // Trigger jump (spacebar event)
+                    setTimeout(function () {
+                        player.keys[" "] = false;  // Release the jump after a short delay
+                    }, 100);  // Adjust the delay as needed
+                }
+            });
         }
 
         // Pointer Lock API for first-person control
@@ -202,6 +295,9 @@
 
                 // Enable pointer lock for first-person control
                 enablePointerLock();
+
+                // Initialize block controls
+                initControls();
 
                 // Render loop with a proper frame cap to avoid duplication
                 var lastUpdate = +new Date() / 1000.0;
