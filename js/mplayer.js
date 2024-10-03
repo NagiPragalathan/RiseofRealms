@@ -14,6 +14,8 @@ MOUSE.MOVE = 3;
 // Creates a new local player manager.
 function Player() {
     this.isBlockActionFromButton = false;  // Flag for block actions triggered by mobile buttons
+    this.blockCountMap = {};
+    this.temp = [];
 }
 
 // setWorld( world )
@@ -121,6 +123,7 @@ Player.prototype.onMouseEvent = function( x, y, type, rmb ) {
 
     if ( type == MOUSE.UP ) {
         this.doBlockAction( x, y, !rmb );
+        console.log("working in condition")
     } else if (type == MOUSE.MOVE) {
         // Update pitch (up-down) and yaw (left-right) for player view
         this.targetYaw += x / 1000;
@@ -143,11 +146,17 @@ Player.prototype.doBlockAction = function( x, y, destroy ) {
 
     if ( block != false ) {
         var obj = this.client ? this.client : this.world;
-
         if ( destroy ) {
             obj.setBlock( block.x, block.y, block.z, BLOCK.AIR ); // Destroy block
+            console.log("block destroyed the block")
         } else {
             obj.setBlock( block.x + block.n.x, block.y + block.n.y, block.z + block.n.z, this.buildMaterial ); // Place block
+            var placeX = block.x + block.n.x;
+            var placeY = block.y + block.n.y;
+            var placeZ = block.z + block.n.z;
+            this.temp.push([placeX, placeY, placeZ])
+            this.blockCountMap[this.buildMaterial.id] = this.temp
+            console.log("placed the block", this.blockCountMap)
         }
     }
 }
@@ -203,6 +212,8 @@ Player.prototype.update = function() {
                 walkVelocity.y += Math.sin( -Math.PI / 2 + Math.PI / 2 - this.angles[1] );
             }
         }
+        console.log("Player's position: x =", this.pos.x, ", y =", this.pos.y, ", z =", this.pos.z);
+console.log("Player's velocity: x =", this.velocity.x, ", y =", this.velocity.y)
 
         // Normalize walk velocity
         if ( walkVelocity.length() > 0 ) {

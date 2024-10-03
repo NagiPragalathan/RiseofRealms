@@ -12,7 +12,7 @@ var WORLD_SZ = 32;
 var WORLD_GROUNDHEIGHT = 16;
 var SECONDS_BETWEEN_SAVES = 60;
 var ADMIN_IP = "";
-const WORLD_NAME = "world"; // Name for world in MongoDB
+const WORLD_NAME = "world2"; // Name for world in MongoDB
 const PLAYER_ID = "admin"; // Player ID for tracking in MongoDB
 
 // Load modules
