@@ -97,7 +97,7 @@ function Renderer( id )
 		gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST );
 		gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST );
 	};
-	playerTexture.image.src = "media/player.png";
+	playerTexture.image.src = "media/player1.png";
 	
 	// Load terrain texture
 	var terrainTexture = this.texTerrain = gl.createTexture();
