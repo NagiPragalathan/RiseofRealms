@@ -17,7 +17,7 @@ const MOVEMENT_SPEED = 4;
 
 export function Avatar({
   id,
-  avatarUrl = "https://models.readyplayer.me/64f0265b1db75f90dcfd9e2c.glb",
+  avatarUrl = "https://api.avaturn.me/avatars/exports/01927047-4345-7c9f-b805-15885643b520/model",
   ...props
 }) {
   const [chatMessage, setChatMessage] = useState("");
@@ -178,8 +178,7 @@ export function Avatar({
 }
 
 useGLTF.preload(
-  localStorage.getItem("avatarURL") ||
-    "https://models.readyplayer.me/64f0265b1db75f90dcfd9e2c.glb?meshlod=1&quality=medium"
+    "https://api.avaturn.me/avatars/exports/01927047-4345-7c9f-b805-15885643b520/model"
 );
 useGLTF.preload("/animations/M_Walk_001.glb");
 useGLTF.preload("/animations/M_Standing_Idle_001.glb");

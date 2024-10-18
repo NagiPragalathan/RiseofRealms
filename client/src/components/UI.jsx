@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { roomItemsAtom } from "./Room";
 import { roomIDAtom, socket } from "./SocketManager";
 import { Link } from "react-router-dom";
+import axios from "axios"; 
 
 export const buildModeAtom = atom(false);
 export const shopModeAtom = atom(false);
@@ -13,8 +14,7 @@ export const draggedItemAtom = atom(null);
 export const draggedItemRotationAtom = atom(0);
 
 export const avatarUrlAtom = atom(
-  localStorage.getItem("avatarURL") ||
-    "https://models.readyplayer.me/64f0265b1db75f90dcfd9e2c.glb?meshlod=1&quality=medium"
+  "https://api.avaturn.me/avatars/exports/01927047-4345-7c9f-b805-15885643b520/model"
 );
 
 const PasswordInput = ({ onClose, onSuccess }) => {
@@ -100,6 +100,30 @@ export const UI = () => {
       setChatMessage("");
     }
   };
+  const playerId = "admin";
+
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      try {
+        const response = await fetch(`http://localhost:3001/api/get-avatar/${playerId}`);
+        
+        if (!response.ok) {
+          console.error("Error: No model found for this player ID.");
+          return;
+        }
+  
+        const data = await response.json();
+        const modelUrl = data.model_url;
+        setAvatarUrl(modelUrl); // Update the atom with the fetched URL
+      } catch (error) {
+        console.error("Error fetching avatar model:", error);
+      }
+    };
+  
+    if (playerId) {
+      fetchAvatar();
+    }
+  }, [playerId, setAvatarUrl]);
 
   return (
     <>

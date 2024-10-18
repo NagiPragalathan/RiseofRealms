@@ -108,7 +108,25 @@ async function init() {
   mesh.receiveShadow = true;
   scene.add(mesh);
 
-  currentAvatar = await loadAvatar("public/default_model.glb");
+
+  var modelUrl = "";
+  var playerId = "admin";
+  try {
+    const response = await fetch(`http://localhost:3001/api/get-avatar/${playerId}`);
+    
+    if (!response.ok) {
+      console.error("Error: No model found for this player ID.");
+      return;
+    }
+
+    const data = await response.json();
+    modelUrl = data.model_url;
+  } catch (error) {
+    modelUrl = "public/default_model.glb"
+    console.error("Error fetching avatar model:", error);
+  }
+
+  currentAvatar = await loadAvatar(modelUrl);
 
   const loader = new GLTFLoader();
   loader.load("public/animation.glb", function (gltf) {
