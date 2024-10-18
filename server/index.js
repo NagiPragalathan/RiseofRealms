@@ -1,6 +1,34 @@
 import fs from "fs";
 import pathfinding from "pathfinding";
 import { Server } from "socket.io";
+import { MongoClient } from "mongodb";
+import express from "express";
+import bodyParser from "body-parser";
+import cors from 'cors'; // Import cors
+
+// MongoDB setup
+const uri = "mongodb+srv://nagi:nagi@cluster0.ohv5gsc.mongodb.net/";
+const client = new MongoClient(uri);
+let db;
+
+// Connect to MongoDB
+async function connectToDB() {
+  try {
+    await client.connect();
+    db = client.db("gameDatabase");
+    console.log("Connected to MongoDB and loading world...");
+  } catch (err) {
+    console.error("MongoDB connection failed:", err);
+  }
+}
+
+// Call this function to ensure DB connection on start
+connectToDB();
+
+// Setup express app
+const app = express();
+app.use(bodyParser.json()); // To parse incoming request bodies
+app.use(cors()); // Enable CORS for all requests
 
 const origin = process.env.CLIENT_URL || "http://localhost:5173";
 const io = new Server({
@@ -10,8 +38,7 @@ const io = new Server({
 });
 
 io.listen(3000);
-
-console.log("Server started on port 3000, allowed cors origin: " + origin);
+console.log("Server started on port 3000, allowed CORS origin: " + origin);
 
 // PATHFINDING UTILS
 
@@ -27,7 +54,6 @@ const findPath = (room, start, end) => {
 };
 
 const updateGrid = (room) => {
-  // RESET GRID FOR ROOM
   for (let x = 0; x < room.size[0] * room.gridDivision; x++) {
     for (let y = 0; y < room.size[1] * room.gridDivision; y++) {
       room.grid.setWalkableAt(x, y, true);
@@ -92,7 +118,6 @@ loadRooms();
 // UTILS
 
 const generateRandomPosition = (room) => {
-  // TO AVOID INFINITE LOOP WE LIMIT TO 100, BEST WOULD BE TO CHECK IF THERE IS ENOUGH SPACE LEFT 🤭
   for (let i = 0; i < 100; i++) {
     const x = Math.floor(Math.random() * room.size[0] * room.gridDivision);
     const y = Math.floor(Math.random() * room.size[1] * room.gridDivision);
@@ -243,11 +268,9 @@ io.on("connection", (socket) => {
       }
     });
   } catch (ex) {
-    console.log(ex); // Big try catch to avoid crashing the server (best would be to handle all errors properly...)
+    console.log(ex);
   }
 });
-
-// ROOMS
 
 // SHOP ITEMS
 const items = {
@@ -258,283 +281,59 @@ const items = {
   toiletSquare: {
     name: "toiletSquare",
     size: [2, 2],
-  },
-  trashcan: {
-    name: "trashcan",
-    size: [1, 1],
-  },
-  bathroomCabinetDrawer: {
-    name: "bathroomCabinetDrawer",
-    size: [2, 2],
-  },
-  bathtub: {
-    name: "bathtub",
-    size: [4, 2],
-  },
-  bathroomMirror: {
-    name: "bathroomMirror",
-    size: [2, 1],
-    wall: true,
-  },
-  bathroomCabinet: {
-    name: "bathroomCabinet",
-    size: [2, 1],
-    wall: true,
-  },
-  bathroomSink: {
-    name: "bathroomSink",
-    size: [2, 2],
-  },
-  showerRound: {
-    name: "showerRound",
-    size: [2, 2],
-  },
-  tableCoffee: {
-    name: "tableCoffee",
-    size: [4, 2],
-  },
-  loungeSofaCorner: {
-    name: "loungeSofaCorner",
-    size: [5, 5],
-    rotation: 2,
-  },
-  bear: {
-    name: "bear",
-    size: [2, 1],
-    wall: true,
-  },
-  loungeSofaOttoman: {
-    name: "loungeSofaOttoman",
-    size: [2, 2],
-  },
-  tableCoffeeGlassSquare: {
-    name: "tableCoffeeGlassSquare",
-    size: [2, 2],
-  },
-  loungeDesignSofaCorner: {
-    name: "loungeDesignSofaCorner",
-    size: [5, 5],
-    rotation: 2,
-  },
-  loungeDesignSofa: {
-    name: "loungeDesignSofa",
-    size: [5, 2],
-    rotation: 2,
-  },
-  loungeSofa: {
-    name: "loungeSofa",
-    size: [5, 2],
-    rotation: 2,
-  },
-  bookcaseOpenLow: {
-    name: "bookcaseOpenLow",
-    size: [2, 1],
-  },
-  bookcaseClosedWide: {
-    name: "bookcaseClosedWide",
-    size: [3, 1],
-    rotation: 2,
-  },
-  bedSingle: {
-    name: "bedSingle",
-    size: [3, 6],
-    rotation: 2,
-  },
-  bench: {
-    name: "bench",
-    size: [2, 1],
-    rotation: 2,
-  },
-  bedDouble: {
-    name: "bedDouble",
-    size: [5, 5],
-    rotation: 2,
-  },
-  benchCushionLow: {
-    name: "benchCushionLow",
-    size: [2, 1],
-  },
-  loungeChair: {
-    name: "loungeChair",
-    size: [2, 2],
-    rotation: 2,
-  },
-  cabinetBedDrawer: {
-    name: "cabinetBedDrawer",
-    size: [1, 1],
-    rotation: 2,
-  },
-  cabinetBedDrawerTable: {
-    name: "cabinetBedDrawerTable",
-    size: [1, 1],
-    rotation: 2,
-  },
-  table: {
-    name: "table",
-    size: [4, 2],
-  },
-  tableCrossCloth: {
-    name: "tableCrossCloth",
-    size: [4, 2],
-  },
-  plant: {
-    name: "plant",
-    size: [1, 1],
-  },
-  plantSmall: {
-    name: "plantSmall",
-    size: [1, 1],
-  },
-  rugRounded: {
-    name: "rugRounded",
-    size: [6, 4],
-    walkable: true,
-  },
-  rugRound: {
-    name: "rugRound",
-    size: [4, 4],
-    walkable: true,
-  },
-  rugSquare: {
-    name: "rugSquare",
-    size: [4, 4],
-    walkable: true,
-  },
-  rugRectangle: {
-    name: "rugRectangle",
-    size: [8, 4],
-    walkable: true,
-  },
-  televisionVintage: {
-    name: "televisionVintage",
-    size: [4, 2],
-    rotation: 2,
-  },
-  televisionModern: {
-    name: "televisionModern",
-    size: [4, 2],
-    rotation: 2,
-  },
-  kitchenFridge: {
-    name: "kitchenFridge",
-    size: [2, 1],
-    rotation: 2,
-  },
-  kitchenFridgeLarge: {
-    name: "kitchenFridgeLarge",
-    size: [2, 1],
-  },
-  kitchenBar: {
-    name: "kitchenBar",
-    size: [2, 1],
-  },
-  kitchenCabinetCornerRound: {
-    name: "kitchenCabinetCornerRound",
-    size: [2, 2],
-  },
-  kitchenCabinetCornerInner: {
-    name: "kitchenCabinetCornerInner",
-    size: [2, 2],
-  },
-  kitchenCabinet: {
-    name: "kitchenCabinet",
-    size: [2, 2],
-  },
-  kitchenBlender: {
-    name: "kitchenBlender",
-    size: [1, 1],
-  },
-  dryer: {
-    name: "dryer",
-    size: [2, 2],
-  },
-  chairCushion: {
-    name: "chairCushion",
-    size: [1, 1],
-    rotation: 2,
-  },
-  chair: {
-    name: "chair",
-    size: [1, 1],
-    rotation: 2,
-  },
-  deskComputer: {
-    name: "deskComputer",
-    size: [3, 2],
-  },
-  desk: {
-    name: "desk",
-    size: [3, 2],
-  },
-  chairModernCushion: {
-    name: "chairModernCushion",
-    size: [1, 1],
-    rotation: 2,
-  },
-  chairModernFrameCushion: {
-    name: "chairModernFrameCushion",
-    size: [1, 1],
-    rotation: 2,
-  },
-  kitchenMicrowave: {
-    name: "kitchenMicrowave",
-    size: [1, 1],
-  },
-  coatRackStanding: {
-    name: "coatRackStanding",
-    size: [1, 1],
-  },
-  kitchenSink: {
-    name: "kitchenSink",
-    size: [2, 2],
-  },
-  lampRoundFloor: {
-    name: "lampRoundFloor",
-    size: [1, 1],
-  },
-  lampRoundTable: {
-    name: "lampRoundTable",
-    size: [1, 1],
-  },
-  lampSquareFloor: {
-    name: "lampSquareFloor",
-    size: [1, 1],
-  },
-  lampSquareTable: {
-    name: "lampSquareTable",
-    size: [1, 1],
-  },
-  toaster: {
-    name: "toaster",
-    size: [1, 1],
-  },
-  kitchenStove: {
-    name: "kitchenStove",
-    size: [2, 2],
-  },
-  laptop: {
-    name: "laptop",
-    size: [1, 1],
-  },
-  radio: {
-    name: "radio",
-    size: [1, 1],
-  },
-  speaker: {
-    name: "speaker",
-    size: [1, 1],
-  },
-  speakerSmall: {
-    name: "speakerSmall",
-    size: [1, 1],
-    rotation: 2,
-  },
-  stoolBar: {
-    name: "stoolBar",
-    size: [1, 1],
-  },
-  stoolBarSquare: {
-    name: "stoolBarSquare",
-    size: [1, 1],
-  },
+  }
 };
+
+// Express API for storing avatar models into MongoDB
+
+// Store avatar model for a player
+app.post("/api/store-avatar", async (req, res) => {
+  const { player_id, model_url } = req.body;
+
+  if (!player_id || !model_url) {
+    return res.status(400).json({ message: 'Missing player_id or model_url.' });
+  }
+
+  try {
+    const collection = db.collection("avatars");
+
+    // Store the model URL for the player
+    await collection.updateOne(
+      { player_id }, // Find by player_id
+      { $set: { model_url, updatedAt: new Date() } }, // Update the model_url and timestamp
+      { upsert: true } // If the document doesn't exist, create it
+    );
+
+    res.status(200).json({ message: "Model URL stored successfully." });
+  } catch (err) {
+    console.error("Error storing model URL:", err);
+    res.status(500).json({ message: "Error storing model URL.", error: err });
+  }
+});
+
+// Retrieve the last model URL by player_id
+app.get("/api/get-avatar/:player_id", async (req, res) => {
+  const player_id = req.params.player_id;
+
+  try {
+    const collection = db.collection("avatars");
+
+    // Retrieve the most recent model URL for the player
+    const playerData = await collection.findOne({ player_id });
+
+    if (playerData) {
+      res.status(200).json({ model_url: playerData.model_url });
+    } else {
+      res.status(404).json({ message: "No model found for the specified player_id." });
+    }
+  } catch (err) {
+    console.error("Error retrieving model URL:", err);
+    res.status(500).json({ message: "Error retrieving model URL.", error: err });
+  }
+});
+
+// Start the Express server
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Express server started on port ${PORT}`);
+});
