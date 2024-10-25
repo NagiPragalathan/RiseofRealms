@@ -1,0 +1,6 @@
+https://github.com/Overv/WebCraft
+
+
+Install node, go to project directory, run node server.js. If necessary install socket.io etc. with npm
+
+Go to http://localhost:3000/multiplayer.html while server is running. You can test 2 players by connecting both via Chrome and Firefox. To connect from different computer replace localhost with the server's IP address

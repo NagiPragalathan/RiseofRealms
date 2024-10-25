@@ -1,0 +1,360 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>WebCraft</title>
+
+    <!-- Character encoding -->
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+    <!-- Stylesheet -->
+    <link href="style/main.css" rel="stylesheet" type="text/css">
+    <link href="style/CustomCss.css" rel="stylesheet" type="text/css">
+
+    <!-- Modules -->
+    <script src="js/glMatrix-1.2.min.js" type="text/javascript"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/blocks.js" type="text/javascript"></script>
+    <script src="js/helpers.js" type="text/javascript"></script>
+    <script src="js/world.js" type="text/javascript"></script>
+    <script src="js/render.js" type="text/javascript"></script>
+    <script src="js/physics.js" type="text/javascript"></script>
+    <script src="js/mplayer.js" type="text/javascript"></script>
+    <script src="js/network.js" type="text/javascript"></script>
+    <script src="js/mobileControls.js" type="text/javascript"></script>
+</head>
+
+<body oncontextmenu="return false">
+    <!-- Render surface -->
+    <canvas id="renderSurface"></canvas>
+
+    <!-- Crosshair -->
+    <div id="crosshair">+</div>
+
+    <!-- Material selection -->
+    <table id="materialSelector" style="display:none">
+        <tr></tr>
+    </table>
+
+    <!-- Joystick for mobile controls -->
+    <div id="joystickContainer" class="hidden">
+        <div id="joystick"></div>
+    </div>
+
+    <!-- Block controls: Place/Remove/Jump -->
+    <div id="blockControls" class="hidden">
+        <button id="placeBlockBtn" class="controlButton">Place Block</button>
+        <button id="removeBlockBtn" class="controlButton">Remove Block</button>
+        <button id="jumpBtn" class="controlButton">Jump</button>
+    </div>
+
+    <!-- Fullscreen button (visible in both mobile and desktop view) -->
+    <button id="fullscreenBtn">🔲</button>
+
+    <!-- Menu button -->
+    <button id="menuBtn">☰</button>
+
+    <!-- Popup Menu -->
+    <div id="popupMenu">
+        <button id="closePopupBtn">X</button>
+        <div id="popupMenuContent">
+            <h2>Game Menu</h2>
+            <p>This is the game menu content.</p>
+        </div>
+    </div>
+
+    <!-- Chatbox -->
+    <div id="chatbox" style="visibility: hidden">
+        <span id="chatbox_text"></span>
+    </div>
+    <input id="chatbox_entry" type="text" maxlength="100" spellcheck="false" onkeypress="onChatEnter(this, event)" style="visibility: hidden" />
+
+    <!-- Nickname box -->
+    <div id="nickname">
+        <span>Nickname:</span><br />
+        <input id="nickname_input" type="text" maxlength="15" spellcheck="false" onkeypress="onNicknameEnter(this, event)" />
+    </div>
+
+    <!-- Joining information -->
+    <div id="joininfo" style="visibility: hidden">
+        <span id="joininfo_text"></span>
+    </div>
+
+    <!-- Main code -->
+    <script type="text/javascript">
+        // Function to check if the device is mobile
+        function isMobileDevice() {
+            return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        }
+
+        // Toggle fullscreen mode
+        function toggleFullScreen() {
+            if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                // Enter fullscreen
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.mozRequestFullScreen) { // Firefox
+                    document.documentElement.mozRequestFullScreen();
+                } else if (document.documentElement.webkitRequestFullscreen) { // Chrome, Safari, and Opera
+                    document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                } else if (document.documentElement.msRequestFullscreen) { // IE/Edge
+                    document.documentElement.msRequestFullscreen();
+                }
+            } else {
+                // Exit fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) { // Firefox
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) { // Chrome, Safari, and Opera
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { // IE/Edge
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        // Attach fullscreen toggle to the button
+        document.getElementById('fullscreenBtn').addEventListener('click', toggleFullScreen);
+
+        // Open menu popup
+        document.getElementById('menuBtn').addEventListener('click', function() {
+            document.getElementById('popupMenu').style.display = 'block';
+        });
+
+        // Close menu popup
+        document.getElementById('closePopupBtn').addEventListener('click', function() {
+            document.getElementById('popupMenu').style.display = 'none';
+        });
+
+        // HTML elements
+        var page = {};
+        page.renderSurface = document.getElementById("renderSurface");
+        page.materialSelector = document.getElementById("materialSelector");
+        page.chatbox = document.getElementById("chatbox");
+        page.chatboxText = document.getElementById("chatbox_text");
+        page.chatboxEntry = document.getElementById("chatbox_entry");
+        page.nickname = document.getElementById("nickname");
+        page.nicknameInput = document.getElementById("nickname_input");
+        page.joinInfo = document.getElementById("joininfo");
+        page.joinInfoText = document.getElementById("joininfo_text");
+
+        // Game elements
+        var client, render, world, player;
+
+        // Detect if device is mobile or desktop
+        function handleDeviceControls() {
+            const joystickContainer = document.getElementById('joystickContainer');
+            const blockControls = document.getElementById('blockControls');
+
+            if (isMobileDevice()) {
+                console.log("Mobile device detected. Enabling mobile controls.");
+                joystickContainer.classList.remove('hidden');  // Show joystick for mobile devices
+                blockControls.classList.remove('hidden');  // Show mobile block controls
+            } else {
+                console.log("Non-mobile device detected. Enabling desktop controls.");
+                blockControls.classList.add('hidden');  // Hide block controls for desktop
+                joystickContainer.classList.add('hidden');  // Hide joystick for non-mobile devices
+            }
+        }
+
+        // Respond to username entry
+        function onNicknameEnter(nicknameInput, keyEvent) {
+            var nickname = nicknameInput.value.trim();
+            if (keyEvent.keyCode != 13) return;
+            if (nickname.length == 0) return;
+            nicknameInput.blur();
+            joinGame(nickname);
+        }
+
+        // Respond to chat message entry
+        function onChatEnter(chatInput, keyEvent) {
+            var msg = chatInput.value.trim();
+            if (keyEvent.keyCode != 13) return;
+            chatInput.blur();
+            page.chatbox.style.height = null;
+            if (msg.length == 0) return;
+            client.sendMessage(msg);
+            chatInput.value = "";
+        }
+
+        // Initialize controls for block placement, removal, and jumping
+        function initControls() {
+            const placeBlockBtn = document.getElementById('placeBlockBtn');
+            const removeBlockBtn = document.getElementById('removeBlockBtn');
+            const jumpBtn = document.getElementById('jumpBtn');
+
+            // Place block button
+            placeBlockBtn.addEventListener('click', function () {
+                if (player && player.doBlockAction) {
+                    player.isBlockActionFromButton = true;  // Allow block actions from buttons
+                    player.doBlockAction(window.innerWidth / 2, window.innerHeight / 2, false);  // Place block
+                }
+            });
+
+            // Remove block button
+            removeBlockBtn.addEventListener('click', function () {
+                if (player && player.doBlockAction) {
+                    player.isBlockActionFromButton = true;  // Allow block actions from buttons
+                    player.doBlockAction(window.innerWidth / 2, window.innerHeight / 2, true);  // Remove block
+                }
+            });
+
+            // Jump button
+            jumpBtn.addEventListener('click', function () {
+                if (player) {
+                    player.keys[" "] = true;  // Trigger jump
+                    setTimeout(function () {
+                        player.keys[" "] = false;  // Reset jump
+                    }, 100);  // Adjust delay as needed
+                }
+            });
+        }
+
+        // Pointer Lock API for desktop controls (disable for mobile)
+        function enablePointerLock() {
+            if (!isMobileDevice()) {
+                var canvas = page.renderSurface;
+                canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
+                canvas.onclick = function () {
+                    canvas.requestPointerLock();
+                };
+
+                document.addEventListener('pointerlockchange', lockChangeAlert, false);
+                document.addEventListener('mozpointerlockchange', lockChangeAlert, false);
+
+                function lockChangeAlert() {
+                    if (document.pointerLockElement === canvas || document.mozPointerLockElement === canvas) {
+                        console.log('Pointer Lock active');
+                        document.addEventListener("mousemove", updatePosition, false);
+                    } else {
+                        console.log('Pointer Lock inactive');
+                        document.removeEventListener("mousemove", updatePosition, false);
+                    }
+                }
+
+                function updatePosition(e) {
+                    if (player) {
+                        player.onMouseEvent(e.movementX, e.movementY, MOUSE.MOVE);
+                    }
+                }
+            }
+        }
+
+        // Exit pointer lock on Esc key press for desktop (disable for mobile)
+        if (!isMobileDevice()) {
+            document.addEventListener("keydown", function (e) {
+                if (e.key === "Escape") {
+                    document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock;
+                    document.exitPointerLock();  // Exit pointer lock
+                }
+            });
+        }
+
+        // Join game
+        function joinGame(nickname) {
+            // Show join info
+            page.nickname.style.visibility = "hidden";
+            page.joinInfo.style.visibility = null;
+            page.joinInfoText.innerHTML = "Connecting to server...";
+
+            // Create client and attempt connection
+            client = new Client(io);
+            client.connect(location.origin, nickname);
+
+            // Update connection status
+            client.on("connect", function () {
+                page.joinInfoText.innerHTML = "Receiving world...";
+            });
+
+            // Initialise world
+            client.on("world", function (w) {
+                page.joinInfoText.innerHTML = "Building chunks...";
+
+                // Set up world
+                world = w;
+
+                // Set up renderer and build level chunks
+                render = new Renderer("renderSurface");
+                render.setWorld(world, 8);
+                render.setPerspective(60, 0.01, 200);
+
+                // Build all world chunks
+                render.buildChunks(999);
+
+                page.joinInfoText.innerHTML = "Spawning...";
+            });
+
+            // Spawn local player
+            client.on("spawn", function () {
+                // Set up local player
+                player = new Player();
+                player.setWorld(world);
+                player.setClient(client);
+                player.setInputCanvas("renderSurface");
+                player.setMaterialSelector("materialSelector");
+
+                // Open game view
+                page.joinInfo.style.visibility = "hidden";
+                page.renderSurface.style.visibility = null;
+                page.materialSelector.style.display = null;
+                page.chatbox.style.visibility = null;
+                page.chatboxEntry.style.visibility = null;
+
+                // Enable pointer lock for first-person control on desktop
+                enablePointerLock();
+
+                // Initialize block controls
+                initControls();
+
+                // Render loop
+                var lastUpdate = +new Date() / 1000.0;
+                var frameRate = 60;  // Cap to 60 frames per second
+                setInterval(function () {
+                    var time = +new Date() / 1000.0;
+                    var deltaTime = time - lastUpdate;
+
+                    if (deltaTime > (1 / frameRate)) {
+                        // Update local player
+                        player.update();
+
+                        // Update networked player
+                        client.updatePlayer();
+
+                        // Build chunks
+                        render.buildChunks(5);
+
+                        // Draw world
+                        render.setCamera(player.getEyePos().toArray(), player.angles);
+                        render.draw();
+
+                        lastUpdate = time;
+                    }
+                }, 1000 / frameRate);
+            });
+
+            // Display chat messages
+            client.on("chat", function (username, message) {
+                page.chatboxText.innerHTML += "&lt;<span style=\"color: #0a0\">" + username + "</span>&gt " + message + "<br />";
+            });
+
+            client.on("message", function (message) {
+                page.chatboxText.innerHTML += "<span style=\"color: #ff8\">" + message + "</span><br />";
+            });
+
+            // Handle disconnection or kicking
+            client.on("disconnect", function (kicked) {
+                page.joinInfo.style.visibility = null;
+                page.renderSurface.style.visibility = "hidden";
+                page.materialSelector.style.display = "none";
+                page.chatbox.style.visibility = "hidden";
+                page.chatboxEntry.style.visibility = "hidden";
+                page.joinInfoText.innerHTML = kicked ? "Kicked from server" : "Lost connection to server!";
+            });
+        }
+
+        // Call this to handle device controls based on the device type
+        handleDeviceControls();
+
+    </script>
+</body>
+</html>
